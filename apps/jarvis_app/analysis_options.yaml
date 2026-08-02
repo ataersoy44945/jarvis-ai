@@ -1,0 +1,8 @@
+# Analysis options for jarvis_app
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_final_locals: true
+    avoid_print: false

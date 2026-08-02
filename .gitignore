@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.db
+jarvis.db
+
+# Flutter
+apps/jarvis_app/.dart_tool/
+apps/jarvis_app/.flutter-plugins
+apps/jarvis_app/.flutter-plugins-dependencies
+apps/jarvis_app/.packages
+apps/jarvis_app/build/
+apps/jarvis_app/.pub-cache/
+apps/jarvis_app/.pub/
+apps/jarvis_app/pubspec.lock
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.iml
