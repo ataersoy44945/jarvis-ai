@@ -4,9 +4,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8-sig",
+        extra="ignore",
+    )
 
     openai_api_key: str = ""
+    # Leave empty for OpenAI. For Groq free tier use: https://api.groq.com/openai/v1
+    openai_base_url: str = ""
     openai_model: str = "gpt-4o-mini"
     jwt_secret: str = "dev-secret-change-me"
     jwt_algorithm: str = "HS256"

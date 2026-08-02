@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/jarvis_theme.dart';
+import '../../core/widgets/hud/hud_panel.dart';
+import '../../core/widgets/hud/hud_tick_rail.dart';
+import '../../core/widgets/jarvis_atmosphere.dart';
 import 'auth_controller.dart';
 import 'register_screen.dart';
 
@@ -40,78 +44,87 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.4),
-            radius: 1.1,
-            colors: [Color(0xFF12304A), JarvisTheme.bg],
-          ),
-        ),
+      body: JarvisAtmosphere(
+        intensity: 1.2,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Padding(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'JARVIS',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: JarvisTheme.cyan,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 4,
+                child: Column(
+                  children: [
+                    const HudTickRail(days: 24),
+                    const SizedBox(height: 28),
+                    Text(
+                      'JARVIS',
+                      style: GoogleFonts.orbitron(
+                        color: JarvisTheme.cyanBright,
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 10,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'ACCESS CONSOLE',
+                      style: GoogleFonts.rajdhani(
+                        color: JarvisTheme.muted,
+                        letterSpacing: 4,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    HudPanel(
+                      title: 'AUTH // CREDENTIALS',
+                      expand: false,
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextFormField(
+                              controller: _email,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(labelText: 'OPERATOR ID / EMAIL'),
+                              validator: (v) =>
+                                  (v == null || !v.contains('@')) ? 'Valid email required' : null,
                             ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _password,
+                              obscureText: true,
+                              onFieldSubmitted: (_) => _submit(),
+                              decoration: const InputDecoration(labelText: 'ACCESS KEY'),
+                              validator: (v) =>
+                                  (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton(
+                              onPressed: auth.loading ? null : _submit,
+                              child: auth.loading
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Text('INITIALIZE'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                );
+                              },
+                              child: const Text('REQUEST NEW CLEARANCE'),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Personal AI assistant',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: JarvisTheme.muted),
-                      ),
-                      const SizedBox(height: 36),
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: 'Email'),
-                        validator: (v) =>
-                            (v == null || !v.contains('@')) ? 'Valid email required' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: true,
-                        decoration: const InputDecoration(labelText: 'Password'),
-                        validator: (v) =>
-                            (v == null || v.length < 6) ? 'Min 6 characters' : null,
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: auth.loading ? null : _submit,
-                        child: auth.loading
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Sign in'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                          );
-                        },
-                        child: const Text('Create account'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    const HudClock(),
+                  ],
                 ),
               ),
             ),
