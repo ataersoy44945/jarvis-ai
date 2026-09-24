@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -20,6 +20,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user")
+    manual_examples: Mapped[list["ManualExample"]] = relationship(back_populates="user")
 
 
 class Conversation(Base):
@@ -72,3 +73,16 @@ class Feedback(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     message: Mapped["Message"] = relationship(back_populates="feedback")
+
+
+class ManualExample(Base):
+    """Hand-written user/assistant turns the user wants Jarvis to learn."""
+
+    __tablename__ = "manual_examples"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    messages: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="manual_examples")

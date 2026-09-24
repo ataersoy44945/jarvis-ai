@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
+from app.api.training import router as training_router
 from app.core.config import get_settings
 from app.db.session import init_db
 
@@ -18,6 +19,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(training_router)
 
 
 @app.on_event("startup")

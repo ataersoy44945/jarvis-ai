@@ -75,3 +75,28 @@ class ConversationOut(BaseModel):
 
 class ConversationDetail(ConversationOut):
     messages: list[MessageOut]
+
+
+class TrainMessage(BaseModel):
+    role: str
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class ManualExampleIn(BaseModel):
+    messages: list[TrainMessage] = Field(min_length=2)
+
+
+class ManualExampleOut(BaseModel):
+    id: int
+    messages: list[TrainMessage]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TrainingStats(BaseModel):
+    corrected: int
+    liked: int
+    manual: int
+    total: int
+    target: int = 100

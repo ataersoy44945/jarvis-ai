@@ -35,9 +35,7 @@ try:
 except Exception:  # backend deps not installed on the GPU box — fall back to a copy
     JARVIS_SYSTEM_PROMPT = (HERE / "system_prompt.txt").read_text(encoding="utf-8")
 
-
-def model_allowed(model: str | None, prefixes: list[str]) -> bool:
-    return bool(model) and any(model.startswith(p) for p in prefixes)
+from app.services.training_select import normalize_manual_messages, select_training_examples
 
 
 def from_db(db_path: Path, prefixes: list[str], include_unrated: bool, max_context: int) -> list[dict]:
@@ -58,42 +56,23 @@ def from_db(db_path: Path, prefixes: list[str], include_unrated: bool, max_conte
         ORDER BY m.conversation_id, m.id
         """
     ).fetchall()
-
-    examples: list[dict] = []
-    stats = {"corrected": 0, "liked": 0, "unrated": 0, "skipped_model": 0}
-    convo: list[dict] = []
-    current = None
-    for r in rows:
-        if r["conversation_id"] != current:
-            current, convo = r["conversation_id"], []
-
-        if r["role"] == "user":
-            convo.append({"role": "user", "content": r["content"]})
-            continue
-
-        # assistant turn
-        best = r["correction"] or r["content"]  # corrected text wins in the context too
-        target = None
-        if r["correction"]:
-            target, why = r["correction"], "corrected"
-        elif r["rating"] == 1 or (include_unrated and r["rating"] is None):
-            if model_allowed(r["model"], prefixes):
-                target, why = r["content"], "liked" if r["rating"] == 1 else "unrated"
-            else:
-                stats["skipped_model"] += 1
-
-        if target and convo and convo[-1]["role"] == "user":
-            context = convo[-(max_context * 2 - 1):]
-            examples.append(
-                {"messages": [{"role": "system", "content": JARVIS_SYSTEM_PROMPT}, *context,
-                              {"role": "assistant", "content": target}]}
-            )
-            stats[why] += 1
-        convo.append({"role": "assistant", "content": best})
-
+    examples, stats = select_training_examples(
+        rows,
+        prefixes=prefixes,
+        include_unrated=include_unrated,
+        max_context=max_context,
+        system_prompt=JARVIS_SYSTEM_PROMPT,
+    )
     con.close()
     print(f"[db] {db_path}: {stats}")
     return examples
+
+
+def _as_example(messages: list[dict], where: str) -> dict:
+    try:
+        return {"messages": normalize_manual_messages(messages, JARVIS_SYSTEM_PROMPT)}
+    except ValueError as exc:
+        sys.exit(f"{where} — {exc}")
 
 
 def from_manual(folder: Path) -> list[dict]:
@@ -106,13 +85,31 @@ def from_manual(folder: Path) -> list[dict]:
             if not line.strip():
                 continue
             ex = json.loads(line)
-            msgs = ex["messages"]
-            if msgs[-1]["role"] != "assistant":
-                sys.exit(f"{f}:{n} — last message must be from assistant")
-            if msgs[0]["role"] != "system":
-                msgs.insert(0, {"role": "system", "content": JARVIS_SYSTEM_PROMPT})
-            out.append({"messages": msgs})
+            out.append(_as_example(ex["messages"], f"{f}:{n}"))
     print(f"[manual] {folder}: {len(out)} examples")
+    return out
+
+
+def from_manual_table(db_path: Path) -> list[dict]:
+    """Examples saved from the app (manual_examples). Same checks as the jsonl files."""
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+    exists = con.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='manual_examples'"
+    ).fetchone()
+    if not exists:
+        con.close()
+        print("[manual-db] table missing — skipping")
+        return []
+    rows = con.execute("SELECT id, messages FROM manual_examples ORDER BY id").fetchall()
+    con.close()
+    out: list[dict] = []
+    for r in rows:
+        messages = r["messages"]
+        if isinstance(messages, str):
+            messages = json.loads(messages)
+        out.append(_as_example(messages, f"manual_examples:{r['id']}"))
+    print(f"[manual-db] {db_path}: {len(out)} examples")
     return out
 
 
@@ -143,6 +140,7 @@ def main() -> None:
     examples: list[dict] = []
     if args.db.exists():
         examples += from_db(args.db, args.allow_model, args.include_unrated, args.max_context_turns)
+        examples += from_manual_table(args.db)
     else:
         print(f"[db] {args.db} not found — skipping")
     if args.manual.exists():

@@ -91,6 +91,25 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  Future<Map<String, dynamic>> trainingStats() async {
+    final res = await _dio.get('/training/stats');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> listTrainingExamples() async {
+    final res = await _dio.get('/training/examples');
+    return (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> createTrainingExample(List<Map<String, String>> messages) async {
+    final res = await _dio.post('/training/examples', data: {'messages': messages});
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<void> deleteTrainingExample(int id) async {
+    await _dio.delete('/training/examples/$id');
+  }
+
   /// rating: 1 good, -1 bad, 0 clear. [correction] = what Jarvis should have said.
   Future<void> sendFeedback({
     required int messageId,

@@ -10,6 +10,7 @@ import '../../core/widgets/hud/hud_tick_rail.dart';
 import '../../core/widgets/jarvis_atmosphere.dart';
 import '../auth/auth_controller.dart';
 import '../sphere/ai_sphere.dart';
+import '../training/training_screen.dart';
 import 'chat_controller.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -99,6 +100,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 _TopHud(
                   userName: auth.name ?? 'OPERATOR',
                   onNewChat: chat.startNewChat,
+                  onTraining: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const TrainingScreen()),
+                    );
+                  },
                   onLogout: chat.logout,
                 ),
                 const SizedBox(height: 8),
@@ -204,11 +210,13 @@ class _TopHud extends StatelessWidget {
   const _TopHud({
     required this.userName,
     required this.onNewChat,
+    required this.onTraining,
     required this.onLogout,
   });
 
   final String userName;
   final VoidCallback onNewChat;
+  final VoidCallback onTraining;
   final VoidCallback onLogout;
 
   @override
@@ -250,6 +258,11 @@ class _TopHud extends StatelessWidget {
             const SizedBox(width: 16),
             const HudClock(),
             const SizedBox(width: 8),
+            IconButton(
+              tooltip: 'Eğitim',
+              onPressed: onTraining,
+              icon: const Icon(Icons.school_outlined, color: JarvisTheme.cyan, size: 20),
+            ),
             IconButton(
               tooltip: 'New session',
               onPressed: onNewChat,
