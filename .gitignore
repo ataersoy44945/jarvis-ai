@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-mlx/
 venv/
 .env
 *.db
@@ -29,4 +30,7 @@ training/data/*.jsonl
 training/adapters/
 training/runs/
 training/.vllm.pid
+training/.mlx.pid
+training/.pipeline.lockdir
 training/logs/
+training/data/mlx/

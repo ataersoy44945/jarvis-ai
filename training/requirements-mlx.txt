@@ -1,0 +1,2 @@
+# Apple Silicon only (MLX). Separate venv from the NVIDIA/vLLM stack.
+mlx-lm

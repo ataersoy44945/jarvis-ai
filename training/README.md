@@ -94,13 +94,48 @@ Hugging Face'teki açık lisanslı Türkçe instruction veri setlerini de `data/
 - **500+ örnek:** kendi alanına özgü bilgiler ve kalıplar oturmaya başlar.
 - Fine-tune **yeni bilgi öğretmekte zayıftır**. Güncel bilgi, hatırlatıcı veya dosya gibi şeyler için ileride RAG/araç çağırma eklemek daha doğru.
 
+## Mac'te (MLX) eğitim
+
+Bu Mac (Apple Silicon, 8 GB RAM) vLLM çalıştıramaz. Aynı döngünün MLX hali `TRAIN_BACKEND=mlx` ile durur; NVIDIA dosyaları (`train_lora.py`, `serve_vllm.sh`, `requirements.txt`) yerinde kalır.
+
+```bash
+cd training
+python3 -m venv .venv-mlx && source .venv-mlx/bin/activate
+pip install -r requirements-mlx.txt
+```
+
+`jarvis.env`:
+
+```
+TRAIN_BACKEND=mlx
+MLX_BASE_MODEL=mlx-community/Qwen2.5-1.5B-Instruct-4bit
+MLX_SERVED_MODEL=default_model
+```
+
+8 GB için eğitim ayarı sabittir: batch 1, gradient checkpointing, sıra uzunluğu 1024, LoRA yalnızca son 8 katmanda. `./pipeline.sh --force` veriyi dışa aktarır, `train_mlx.sh` ile `adapters/vNNN` üretir, `serve_mlx.sh` modeli `127.0.0.1:8001` üzerinde açar ve duman testini yapar. Test düşerse önceki `adapters/current` geri gelir.
+
+`mlx_lm.server` istekteki `model` alanını bir model yolu sayar. CLI ile açılan modeli ve adapter'ı seçen tek hazır ad `default_model`'dir. Başka bir ad (örneğin `jarvis`) ayrı bir model yüklemeye çalışır ve adapter'ı kullanmaz. Bu yüzden `backend/.env` şöyle olmalı:
+
+```
+LLM_PROVIDER=vllm
+VLLM_BASE_URL=http://127.0.0.1:8001/v1
+VLLM_MODEL=default_model
+```
+
+Sunucu, `--adapter-path` değerini takma ad çözüldükten sonra aradığı için CLI adapter'ını düşürür (mlx-lm #1248). `serve_mlx.sh` adapter'ı takma ad üzerinden geri bağlar. Eğitim verisi filtresi değişmez: 👍 yalnızca `vllm:` ile kayıtlı kendi model cevaplarında, ✏️ her zaman senin metnindir.
+
+Loglar: `logs/pipeline.log`, `logs/mlx.log`.
+
 ## Dosyalar
 
 | Dosya | İş |
 |---|---|
 | `jarvis.env` | Taban model, port, eşikler |
 | `export_dataset.py` | SQLite + manuel örnekler → `data/train.jsonl`, `data/eval.jsonl` |
-| `train_lora.py` | QLoRA (4-bit) eğitim → `adapters/vNNN` |
+| `train_lora.py` | QLoRA (4-bit, NVIDIA) eğitim → `adapters/vNNN` |
+| `train_mlx.sh` | MLX LoRA (Apple Silicon) eğitim → `adapters/vNNN` |
 | `serve_vllm.sh` | vLLM'i güncel adapter ile başlatır/durdurur |
+| `serve_mlx.sh` | mlx_lm.server'ı güncel adapter ile başlatır/durdurur |
+| `requirements-mlx.txt` | MLX venv bağımlılıkları (`.venv-mlx`) |
 | `pipeline.sh` | Hepsini sırayla, güvenli şekilde çalıştırır |
 | `system_prompt.txt` | Backend kurulu değilse kullanılan sistem prompt'u kopyası |
