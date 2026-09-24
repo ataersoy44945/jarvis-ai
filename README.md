@@ -5,7 +5,8 @@ Cross-platform personal AI assistant (Flutter + FastAPI).
 ## Stack
 
 - **App:** Flutter (Windows, macOS, iOS, Android)
-- **API:** FastAPI + SQLite + JWT auth + OpenAI
+- **API:** FastAPI + SQLite + JWT auth + OpenAI-compatible LLM (OpenAI / Groq / your own model on vLLM)
+- **Training:** QLoRA fine-tuning loop fed by in-app feedback — see [`training/README.md`](training/README.md)
 
 ## Quick start
 
@@ -73,6 +74,7 @@ jarvis-ai/
 | POST | `/chat` | yes | Send message |
 | GET | `/chat/conversations` | yes | List chats |
 | GET | `/chat/conversations/{id}` | yes | Chat + messages |
+| POST | `/chat/messages/{id}/feedback` | yes | Rate a reply (1 / -1 / 0) + optional correction |
 
 ## Notes
 

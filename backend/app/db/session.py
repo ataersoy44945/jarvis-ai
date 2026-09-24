@@ -28,3 +28,14 @@ def init_db() -> None:
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """Tiny migration: create_all() doesn't alter existing tables, so add new columns by hand."""
+    from sqlalchemy import inspect, text
+
+    cols = {c["name"] for c in inspect(engine).get_columns("messages")}
+    if "model" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE messages ADD COLUMN model VARCHAR(120)"))

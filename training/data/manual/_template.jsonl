@@ -1,0 +1,2 @@
+{"messages": [{"role": "user", "content": "<kullanıcının sorusu>"}, {"role": "assistant", "content": "<Jarvis'in vermesini istediğin cevap — kendin yaz>"}]}
+{"messages": [{"role": "user", "content": "<ilk soru>"}, {"role": "assistant", "content": "<ilk cevap>"}, {"role": "user", "content": "<devam sorusu>"}, {"role": "assistant", "content": "<eğitilecek cevap: sadece bu son cevap öğretilir>"}]}

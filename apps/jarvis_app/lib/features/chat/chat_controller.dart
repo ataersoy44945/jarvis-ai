@@ -6,10 +6,16 @@ import '../../core/audio/voice_service.dart';
 import '../auth/auth_controller.dart';
 
 class ChatMessage {
-  ChatMessage({required this.role, required this.content});
+  ChatMessage({required this.role, required this.content, this.id, this.rating});
 
   final String role;
   final String content;
+
+  /// Server id (assistant replies only) — needed for feedback.
+  final int? id;
+
+  /// 1 = good, -1 = bad, null = not rated.
+  int? rating;
 }
 
 class ChatController extends ChangeNotifier {
@@ -63,6 +69,8 @@ class ChatController extends ChangeNotifier {
           (m) => ChatMessage(
             role: (m as Map)['role'] as String,
             content: m['content'] as String,
+            id: m['id'] as int?,
+            rating: m['rating'] as int?,
           ),
         ),
       );
@@ -93,7 +101,11 @@ class ChatController extends ChangeNotifier {
       );
       conversationId = data['conversation_id'] as int;
       final reply = data['reply'] as String;
-      messages.add(ChatMessage(role: 'assistant', content: reply));
+      messages.add(ChatMessage(
+        role: 'assistant',
+        content: reply,
+        id: data['message_id'] as int?,
+      ));
       notifyListeners();
       if (speakReply) {
         await voice.speak(reply);
@@ -108,6 +120,24 @@ class ChatController extends ChangeNotifier {
       voice.setThinking(false);
     } finally {
       sending = false;
+      notifyListeners();
+    }
+  }
+
+  /// Rate a Jarvis reply. Tapping the same rating again clears it.
+  /// Rated replies (and corrections) become training data for your own model.
+  Future<void> rate(ChatMessage m, int rating, {String? correction}) async {
+    final id = m.id;
+    if (id == null) return;
+    final previous = m.rating;
+    final next = (previous == rating && correction == null) ? 0 : rating;
+    m.rating = next == 0 ? null : next;
+    notifyListeners();
+    try {
+      await _api.sendFeedback(messageId: id, rating: next, correction: correction);
+    } catch (e) {
+      m.rating = previous;
+      error = 'Geri bildirim kaydedilemedi: $e';
       notifyListeners();
     }
   }

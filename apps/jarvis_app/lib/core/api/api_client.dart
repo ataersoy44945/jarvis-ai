@@ -90,4 +90,19 @@ class ApiClient {
     final res = await _dio.get('/chat/conversations/$id');
     return Map<String, dynamic>.from(res.data as Map);
   }
+
+  /// rating: 1 good, -1 bad, 0 clear. [correction] = what Jarvis should have said.
+  Future<void> sendFeedback({
+    required int messageId,
+    required int rating,
+    String? correction,
+  }) async {
+    await _dio.post(
+      '/chat/messages/$messageId/feedback',
+      data: {
+        'rating': rating,
+        if (correction != null && correction.trim().isNotEmpty) 'correction': correction.trim(),
+      },
+    );
+  }
 }

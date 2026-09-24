@@ -413,18 +413,67 @@ class _TranscriptPanel extends StatelessWidget {
                   return const _TypingLine();
                 }
                 final m = chat.messages[index];
-                return _FeedLine(mine: m.role == 'user', text: m.content);
+                return _FeedLine(
+                  mine: m.role == 'user',
+                  text: m.content,
+                  rating: m.rating,
+                  onRate: m.role == 'assistant' && m.id != null
+                      ? (r) => chat.rate(m, r)
+                      : null,
+                  onCorrect: m.role == 'assistant' && m.id != null
+                      ? () => _askCorrection(context, chat, m)
+                      : null,
+                );
               },
             ),
     );
   }
 }
 
+Future<void> _askCorrection(BuildContext context, ChatController chat, ChatMessage m) async {
+  final ctrl = TextEditingController(text: m.content);
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: JarvisTheme.bg,
+      title: Text(
+        'DOĞRU CEVAP NE OLMALIYDI?',
+        style: GoogleFonts.orbitron(color: JarvisTheme.cyan, fontSize: 12, letterSpacing: 1.5),
+      ),
+      content: SizedBox(
+        width: 480,
+        child: TextField(
+          controller: ctrl,
+          maxLines: 8,
+          style: GoogleFonts.rajdhani(color: JarvisTheme.ink, fontSize: 15),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İPTAL')),
+        TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('KAYDET')),
+      ],
+    ),
+  );
+  if (result != null && result.trim().isNotEmpty) {
+    // A correction means "this is what you should have said" — stored as a good example.
+    await chat.rate(m, 1, correction: result);
+  }
+}
+
 class _FeedLine extends StatelessWidget {
-  const _FeedLine({required this.mine, required this.text});
+  const _FeedLine({
+    required this.mine,
+    required this.text,
+    this.rating,
+    this.onRate,
+    this.onCorrect,
+  });
 
   final bool mine;
   final String text;
+  final int? rating;
+  final void Function(int rating)? onRate;
+  final VoidCallback? onCorrect;
 
   @override
   Widget build(BuildContext context) {
@@ -461,11 +510,57 @@ class _FeedLine extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                if (onRate != null)
+                  Row(
+                    children: [
+                      _RateBtn(
+                        icon: Icons.thumb_up_alt_outlined,
+                        active: rating == 1,
+                        tooltip: 'İyi cevap',
+                        onTap: () => onRate!(1),
+                      ),
+                      _RateBtn(
+                        icon: Icons.thumb_down_alt_outlined,
+                        active: rating == -1,
+                        tooltip: 'Kötü cevap',
+                        onTap: () => onRate!(-1),
+                      ),
+                      _RateBtn(
+                        icon: Icons.edit_outlined,
+                        active: false,
+                        tooltip: 'Düzelt',
+                        onTap: onCorrect,
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RateBtn extends StatelessWidget {
+  const _RateBtn({required this.icon, required this.active, required this.tooltip, this.onTap});
+
+  final IconData icon;
+  final bool active;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      iconSize: 15,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 24),
+      color: active ? JarvisTheme.cyanBright : JarvisTheme.muted,
+      icon: Icon(icon),
+      onPressed: onTap,
     );
   }
 }

@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import APIConnectionError, OpenAI
 
 from app.core.config import get_settings
 
@@ -21,6 +21,9 @@ def _is_missing_key(api_key: str) -> bool:
 
 
 def _resolve_client(settings) -> tuple[OpenAI, str]:
+    if settings.llm_provider.strip().lower() == "vllm":
+        return OpenAI(api_key=settings.vllm_api_key or "EMPTY", base_url=settings.vllm_base_url), settings.vllm_model
+
     api_key = settings.openai_api_key.strip()
     base_url = (settings.openai_base_url or "").strip() or None
     model = settings.openai_model
@@ -37,25 +40,37 @@ def _resolve_client(settings) -> tuple[OpenAI, str]:
     return OpenAI(**kwargs), model
 
 
-def generate_reply(history: list[dict[str, str]], user_message: str) -> str:
+def generate_reply(history: list[dict[str, str]], user_message: str) -> tuple[str, str | None]:
+    """Returns (reply_text, model_name). model_name is None when no model was called."""
     settings = get_settings()
-    if _is_missing_key(settings.openai_api_key):
+    use_vllm = settings.llm_provider.strip().lower() == "vllm"
+    if not use_vllm and _is_missing_key(settings.openai_api_key):
         return (
             "API anahtarı ayarlanmamış. "
-            "Ücretsiz Groq için: console.groq.com/keys → key al, "
-            "backend/.env içinde OPENAI_API_KEY=gsk_... yapıp sunucuyu yeniden başlat."
-        )
+            "Kendi modelin için backend/.env içinde LLM_PROVIDER=vllm yap, "
+            "ya da ücretsiz Groq için OPENAI_API_KEY=gsk_... gir ve sunucuyu yeniden başlat."
+        ), None
 
     client, model = _resolve_client(settings)
     messages: list[dict[str, str]] = [{"role": "system", "content": JARVIS_SYSTEM_PROMPT}]
     messages.extend(history)
     messages.append({"role": "user", "content": user_message})
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.7,
-        max_tokens=800,
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+        )
+    except APIConnectionError:
+        if use_vllm:
+            return (
+                f"Modele ulaşamıyorum ({settings.vllm_base_url}). "
+                "vLLM sunucusu çalışıyor mu? training/serve_vllm.sh ile başlat."
+            ), None
+        raise
     content = response.choices[0].message.content
-    return (content or "").strip() or "Anlamadım — tekrar dener misin?"
+    reply = (content or "").strip() or "Anlamadım — tekrar dener misin?"
+    tag = f"vllm:{model}" if use_vllm else model
+    return reply, tag

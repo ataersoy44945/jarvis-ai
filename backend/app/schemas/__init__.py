@@ -37,12 +37,28 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     conversation_id: int
+    message_id: int | None = None  # id of the assistant reply, for feedback
+
+
+class FeedbackRequest(BaseModel):
+    rating: int = Field(ge=-1, le=1)  # 1 good, -1 bad, 0 = clear
+    correction: str | None = Field(default=None, max_length=8000)
+
+
+class FeedbackOut(BaseModel):
+    message_id: int
+    rating: int
+    correction: str | None
+
+    model_config = {"from_attributes": True}
 
 
 class MessageOut(BaseModel):
     id: int
     role: str
     content: str
+    model: str | None = None
+    rating: int | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -23,3 +23,10 @@ apps/jarvis_app/pubspec.lock
 .DS_Store
 Thumbs.db
 *.iml
+
+# Training artifacts
+training/data/*.jsonl
+training/adapters/
+training/runs/
+training/.vllm.pid
+training/logs/

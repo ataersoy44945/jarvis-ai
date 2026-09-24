@@ -1,0 +1,9 @@
+# GPU box only (Linux + NVIDIA). Install torch matching your CUDA first if needed.
+torch>=2.4
+transformers>=4.46
+peft>=0.13
+bitsandbytes>=0.44
+accelerate>=1.0
+datasets>=3.0
+# Serving (can live in a separate venv — vLLM pins its own torch):
+# vllm>=0.6
